@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Workers — Portal del Empleado</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  :root{ --acc:#32CD32; --acc2:#28a428; --bg:#FFFFFF; --txt:#1a1a1a; --gris:#F8F9FA; --rojo:#FF4D4D; --naranja:#FF8C00; --azul:#007AFF; --card:#FFFFFF; }
+  body{ background:var(--gris); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; color:var(--txt); }
+
+  /* LOGIN */
+  .login-screen{ position:fixed; inset:0; background:var(--bg); display:flex; flex-direction:column; z-index:2000; }
+  .login-hero{ background:var(--txt); padding:60px 24px 40px; text-align:center; flex-shrink:0; }
+  .login-logo{ width:72px; height:72px; border-radius:22px; margin:0 auto 16px; overflow:hidden; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; }
+  .login-logo img{ width:100%; height:100%; object-fit:cover; }
+  .login-logo-placeholder{ font-size:2rem; font-weight:900; color:var(--acc); }
+  .login-empresa{ font-size:1.4rem; font-weight:900; color:white; letter-spacing:-0.5px; }
+  .login-sub{ font-size:0.78rem; color:rgba(255,255,255,0.5); margin-top:4px; }
+  .login-workers-badge{ display:inline-flex; align-items:center; gap:6px; background:rgba(50,205,50,0.15); border:1px solid rgba(50,205,50,0.3); border-radius:20px; padding:5px 14px; margin-top:12px; }
+  .login-workers-badge span{ font-size:0.7rem; font-weight:800; color:var(--acc); }
+  .login-body{ flex:1; padding:28px 24px; overflow-y:auto; }
+  .login-title{ font-size:1.1rem; font-weight:800; color:var(--txt); margin-bottom:6px; }
+  .login-desc{ font-size:0.8rem; color:#aaa; margin-bottom:24px; }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:0.68rem; font-weight:700; color:#aaa; text-transform:uppercase; margin-bottom:6px; }
+  .field input{ width:100%; padding:14px 16px; background:var(--gris); border:1.5px solid #eee; border-radius:14px; font-family:'Inter',sans-serif; font-size:0.92rem; color:var(--txt); outline:none; -webkit-appearance:none; }
+  .field input:focus{ border-color:var(--acc); }
+  .field input::placeholder{ color:#bbb; }
+  .btn-main{ width:100%; padding:15px; background:var(--txt); color:white; border:none; border-radius:14px; font-family:'Inter',sans-serif; font-size:0.95rem; font-weight:800; cursor:pointer; margin-top:4px; }
+  .btn-acc{ background:var(--acc); color:white; }
+  .login-error{ font-size:0.78rem; color:var(--rojo); text-align:center; margin-top:10px; display:none; }
+  .poweredby{ text-align:center; margin-top:20px; font-size:0.68rem; color:#ccc; }
+  .poweredby strong{ color:var(--acc); }
+
+  /* NOTIF BAR */
+  .notif-bar{ background:var(--acc); padding:10px 16px; display:flex; align-items:center; gap:8px; }
+  .notif-bar svg{ width:14px; height:14px; stroke:white; fill:none; stroke-width:2.5; flex-shrink:0; }
+  .notif-bar-txt{ font-size:0.72rem; font-weight:700; color:white; flex:1; }
+  .notif-bar-close{ font-size:1rem; color:white; cursor:pointer; opacity:0.7; background:none; border:none; }
+
+  /* HEADER */
+  .app-header{ background:var(--txt); padding:16px 16px 16px; display:flex; align-items:center; gap:12px; }
+  .emp-avatar-hdr{ width:42px; height:42px; border-radius:14px; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:800; color:var(--acc); flex-shrink:0; overflow:hidden; }
+  .emp-avatar-hdr img{ width:100%; height:100%; object-fit:cover; }
+  .emp-info-hdr{ flex:1; }
+  .emp-nombre-hdr{ font-size:0.92rem; font-weight:800; color:white; }
+  .emp-cargo-hdr{ font-size:0.7rem; color:rgba(255,255,255,0.5); margin-top:1px; }
+  .btn-logout{ background:rgba(255,255,255,0.08); border:none; width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .btn-logout svg{ width:16px; height:16px; stroke:rgba(255,255,255,0.6); fill:none; stroke-width:2; }
+
+  /* TAB BAR */
+  .tab-bar{ position:fixed; bottom:0; width:100%; background:white; display:flex; border-top:1px solid #eee; z-index:100; box-shadow:0 -4px 16px rgba(0,0,0,0.06); }
+  .tab{ flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 0 18px; cursor:pointer; border:none; background:transparent; font-family:'Inter',sans-serif; color:#ccc; }
+  .tab.active{ color:var(--acc); }
+  .tab svg{ width:22px; height:22px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .tab span{ font-size:0.56rem; font-weight:700; text-transform:uppercase; }
+  .tab-dot{ width:4px; height:4px; border-radius:50%; background:var(--acc); display:none; }
+  .tab.active .tab-dot{ display:block; }
+
+  /* SECCIONES */
+  .section{ display:none; padding:14px 16px; padding-bottom:100px; }
+  .section.active{ display:block; }
+
+  /* HOME */
+  .asist-card{ background:var(--txt); border-radius:22px; padding:20px; margin-bottom:14px; position:relative; overflow:hidden; }
+  .asist-card::before{ content:''; position:absolute; right:-20px; top:-20px; width:120px; height:120px; background:radial-gradient(circle,rgba(50,205,50,0.2) 0%,transparent 70%); }
+  .asist-card-title{ font-size:0.68rem; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; margin-bottom:4px; }
+  .asist-hora{ font-size:2rem; font-weight:900; color:white; letter-spacing:-1px; }
+  .asist-fecha{ font-size:0.78rem; color:rgba(255,255,255,0.5); margin-bottom:16px; }
+  .btn-registrar{ width:100%; padding:14px; background:var(--acc); color:white; border:none; border-radius:14px; font-family:'Inter',sans-serif; font-size:0.95rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .btn-registrar svg{ width:18px; height:18px; stroke:white; fill:none; stroke-width:2.5; }
+  .btn-registrar:disabled{ opacity:0.4; cursor:not-allowed; }
+  .geo-status{ display:flex; align-items:center; gap:6px; margin-top:10px; }
+  .geo-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .geo-dot.ok{ background:var(--acc); animation:pulse 1.5s infinite; }
+  .geo-dot.err{ background:var(--rojo); }
+  .geo-dot.check{ background:var(--naranja); }
+  @keyframes pulse{ 0%,100%{opacity:1}50%{opacity:0.4} }
+  .geo-txt{ font-size:0.7rem; color:rgba(255,255,255,0.6); }
+  .asist-registrada{ background:rgba(50,205,50,0.15); border:1px solid rgba(50,205,50,0.3); border-radius:12px; padding:12px 14px; display:flex; align-items:center; gap:10px; margin-top:10px; }
+  .asist-registrada svg{ width:18px; height:18px; stroke:var(--acc); fill:none; stroke-width:2.5; flex-shrink:0; }
+  .asist-registrada span{ font-size:0.8rem; font-weight:700; color:var(--acc); }
+
+  /* KPI */
+  .kpi-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+  .kpi{ background:white; border-radius:18px; padding:16px; border:1px solid #eee; box-shadow:0 2px 6px rgba(0,0,0,0.04); }
+  .kpi-val{ font-size:1.4rem; font-weight:900; color:var(--txt); }
+  .kpi-val.acc{ color:var(--acc); }
+  .kpi-val.naranja{ color:var(--naranja); }
+  .kpi-val.rojo{ color:var(--rojo); }
+  .kpi-val.azul{ color:var(--azul); }
+  .kpi-lbl{ font-size:0.6rem; color:#aaa; font-weight:700; text-transform:uppercase; margin-top:3px; }
+
+  /* SUELDO */
+  .sueldo-card{ background:linear-gradient(135deg,var(--txt),#2a2a2a); border-radius:22px; padding:20px; margin-bottom:14px; }
+  .sueldo-label{ font-size:0.68rem; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; margin-bottom:6px; }
+  .sueldo-monto{ font-size:2.2rem; font-weight:900; color:white; letter-spacing:-1px; }
+  .sueldo-neto-label{ font-size:0.72rem; color:rgba(255,255,255,0.5); margin-top:2px; }
+  .sueldo-estado{ display:inline-flex; align-items:center; gap:5px; background:rgba(50,205,50,0.15); border-radius:20px; padding:4px 12px; margin-top:10px; }
+  .sueldo-estado svg{ width:12px; height:12px; stroke:var(--acc); fill:none; stroke-width:2.5; }
+  .sueldo-estado span{ font-size:0.68rem; font-weight:800; color:var(--acc); }
+  .sueldo-detalles{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px; }
+  .sueldo-det{ background:rgba(255,255,255,0.06); border-radius:12px; padding:12px; }
+  .sueldo-det-lbl{ font-size:0.62rem; color:rgba(255,255,255,0.4); font-weight:600; text-transform:uppercase; margin-bottom:4px; }
+  .sueldo-det-val{ font-size:0.9rem; font-weight:800; color:white; }
+
+  /* BENEFICIOS */
+  .beneficio-card{ background:white; border-radius:18px; padding:16px; margin-bottom:10px; border:1px solid #eee; box-shadow:0 2px 6px rgba(0,0,0,0.04); }
+  .ben-header{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .ben-icon{ width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
+  .ben-titulo{ font-size:0.88rem; font-weight:700; color:var(--txt); }
+  .ben-sub{ font-size:0.72rem; color:#aaa; margin-top:2px; }
+  .ben-barra{ height:6px; background:#eee; border-radius:6px; overflow:hidden; margin-bottom:6px; }
+  .ben-fill{ height:100%; background:var(--acc); border-radius:6px; }
+  .ben-monto{ font-size:1.1rem; font-weight:900; color:var(--acc); }
+  .ben-acumulado{ font-size:0.7rem; color:#aaa; }
+
+  /* AGENDA */
+  .evento-item{ display:flex; gap:12px; padding:12px; background:white; border-radius:14px; margin-bottom:8px; border:1px solid #eee; box-shadow:0 2px 6px rgba(0,0,0,0.04); }
+  .evento-fecha-box{ width:44px; height:44px; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; }
+  .evento-dia{ font-size:1.1rem; font-weight:900; color:white; line-height:1; }
+  .evento-mes{ font-size:0.58rem; font-weight:700; color:rgba(255,255,255,0.7); text-transform:uppercase; }
+  .evento-info{ flex:1; }
+  .evento-titulo{ font-size:0.85rem; font-weight:700; color:var(--txt); }
+  .evento-desc{ font-size:0.72rem; color:#aaa; margin-top:2px; }
+  .evento-tipo{ font-size:0.6rem; font-weight:700; padding:2px 8px; border-radius:6px; display:inline-block; margin-top:4px; }
+
+  /* BUZÓN */
+  .mensaje-item{ background:white; border-radius:14px; padding:14px; margin-bottom:8px; border:1px solid #eee; }
+  .msg-header{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .msg-de{ font-size:0.78rem; font-weight:700; color:var(--txt); }
+  .msg-hora{ font-size:0.68rem; color:#aaa; margin-left:auto; }
+  .msg-txt{ font-size:0.8rem; color:#555; line-height:1.5; }
+  .msg-no-leido{ width:8px; height:8px; border-radius:50%; background:var(--acc); flex-shrink:0; }
+  .buzon-form{ background:white; border-radius:18px; padding:16px; margin-bottom:12px; border:1px solid #eee; }
+  .buzon-form-title{ font-size:0.82rem; font-weight:700; color:var(--txt); margin-bottom:12px; }
+  .buzon-textarea{ width:100%; padding:12px 14px; background:var(--gris); border:1.5px solid #eee; border-radius:12px; font-family:'Inter',sans-serif; font-size:0.88rem; color:var(--txt); outline:none; resize:none; height:80px; }
+  .buzon-textarea:focus{ border-color:var(--acc); }
+  .buzon-tipo-row{ display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+  .tipo-chip{ padding:6px 12px; border-radius:20px; border:1.5px solid #eee; font-size:0.72rem; font-weight:700; cursor:pointer; color:#aaa; background:transparent; font-family:'Inter',sans-serif; }
+  .tipo-chip.sel{ border-color:var(--acc); color:var(--acc); background:rgba(50,205,50,0.06); }
+  .btn-enviar-msg{ width:100%; padding:12px; background:var(--txt); color:white; border:none; border-radius:12px; font-family:'Inter',sans-serif; font-size:0.88rem; font-weight:700; cursor:pointer; }
+
+  /* ASISTENCIA HISTORIAL */
+  .asist-hist-item{ display:flex; align-items:center; gap:10px; padding:12px; background:white; border-radius:14px; margin-bottom:8px; border:1px solid #eee; }
+  .asist-hist-fecha{ font-size:0.72rem; font-weight:700; color:#aaa; width:70px; flex-shrink:0; }
+  .asist-hist-info{ flex:1; }
+  .asist-hist-hora{ font-size:0.82rem; font-weight:700; color:var(--txt); }
+  .asist-hist-estado{ font-size:0.65rem; font-weight:700; padding:3px 8px; border-radius:6px; flex-shrink:0; }
+  .est-puntual{ background:rgba(50,205,50,0.1); color:var(--acc); }
+  .est-tarde{ background:rgba(255,140,0,0.1); color:var(--naranja); }
+  .est-falta{ background:rgba(255,77,77,0.1); color:var(--rojo); }
+  .asist-hist-atraso{ font-size:0.68rem; color:#aaa; margin-top:2px; }
+
+  /* MODALES */
+  .modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:flex-end; z-index:500; }
+  .modal-overlay.show{ display:flex; }
+  .modal-sheet{ background:white; width:100%; max-height:90vh; border-radius:24px 24px 0 0; transform:translateY(100%); transition:0.4s cubic-bezier(0.16,1,0.3,1); display:flex; flex-direction:column; overflow:hidden; }
+  .modal-overlay.show .modal-sheet{ transform:translateY(0); }
+  .drag{ width:36px; height:4px; background:#e0e0e0; border-radius:4px; margin:14px auto 0; flex-shrink:0; }
+  .modal-header{ padding:12px 16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f5f5f5; flex-shrink:0; }
+  .modal-title{ font-size:1rem; font-weight:800; color:var(--txt); }
+  .close-btn{ width:30px; height:30px; background:var(--gris); border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; border:none; }
+  .close-btn svg{ width:14px; height:14px; stroke:#666; fill:none; stroke-width:2.5; }
+  .modal-body{ overflow-y:auto; padding:16px 16px 32px; flex:1; }
+
+  /* BIOMÉTRICO */
+  .bio-screen{ text-align:center; padding:20px 0; }
+  .bio-icon{ width:100px; height:100px; border-radius:50%; background:var(--gris); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; transition:0.3s; }
+  .bio-icon svg{ width:44px; height:44px; stroke:var(--txt); fill:none; stroke-width:1.5; }
+  .bio-icon.scanning{ background:rgba(50,205,50,0.1); animation:bioPulse 1s infinite; }
+  .bio-icon.scanning svg{ stroke:var(--acc); }
+  .bio-icon.ok{ background:rgba(50,205,50,0.15); }
+  .bio-icon.ok svg{ stroke:var(--acc); }
+  .bio-icon.error{ background:rgba(255,77,77,0.1); }
+  .bio-icon.error svg{ stroke:var(--rojo); }
+  @keyframes bioPulse{ 0%,100%{transform:scale(1)}50%{transform:scale(1.05)} }
+  .bio-title{ font-size:1rem; font-weight:800; color:var(--txt); margin-bottom:6px; }
+  .bio-sub{ font-size:0.8rem; color:#aaa; line-height:1.5; margin-bottom:20px; }
+  .btn-bio{ width:100%; padding:14px; background:var(--txt); color:white; border:none; border-radius:14px; font-family:'Inter',sans-serif; font-size:0.92rem; font-weight:700; cursor:pointer; }
+  .btn-bio.acc{ background:var(--acc); }
+  .foto-captura-wrap{ position:relative; width:120px; height:120px; border-radius:50%; overflow:hidden; margin:0 auto 14px; border:3px solid var(--acc); }
+  .foto-captura-wrap img{ width:100%; height:100%; object-fit:cover; }
+  .foto-cap-placeholder{ width:100%; height:100%; background:var(--gris); display:flex; align-items:center; justify-content:center; }
+  .foto-cap-placeholder svg{ width:36px; height:36px; stroke:#ccc; fill:none; stroke-width:1.5; }
+  .foto-cap-input{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+
+  .upload-overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:1000; }
+  .upload-overlay.show{ display:flex; }
+  .upload-box{ background:white; border-radius:20px; padding:24px; width:80%; max-width:280px; text-align:center; }
+  .spinner{ width:36px; height:36px; border:3px solid #eee; border-top-color:var(--acc); border-radius:50%; animation:spin 0.7s linear infinite; margin:0 auto 10px; }
+  .upload-box p{ font-size:0.82rem; color:#666; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .toast{ position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--txt); color:white; padding:10px 20px; border-radius:24px; font-size:0.82rem; font-weight:700; opacity:0; transition:0.3s; pointer-events:none; z-index:2000; white-space:nowrap; }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .sec-title{ font-size:0.7rem; font-weight:800; color:#aaa; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
+  .empty-state{ text-align:center; padding:30px 20px; color:#bbb; font-size:0.82rem; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-hero" id="login-hero">
+    <div class="login-logo" id="login-logo">
+      <div class="login-logo-placeholder" id="login-logo-placeholder">W</div>
+    </div>
+    <div class="login-empresa" id="login-empresa">Workers</div>
+    <div class="login-sub" id="login-sub">Portal del Empleado</div>
+    <div class="login-workers-badge">
+      <span>⚡ WORKERS by PROVEED</span>
+    </div>
+  </div>
+  <div class="login-body">
+    <div class="login-title">Accede a tu portal</div>
+    <div class="login-desc">Ingresa tu número de cédula y la contraseña que te proporcionó tu empresa.</div>
+    <div class="field"><label>Número de cédula</label><input type="number" id="login-cedula" placeholder="1712345678" maxlength="10" inputmode="numeric"></div>
+    <div class="field"><label>Contraseña / PIN</label><input type="password" id="login-pin" placeholder="••••••"></div>
+    <div class="field"><label>Código de empresa</label><input type="text" id="login-empresa-code" placeholder="Ej: GODRESS-001" style="text-transform:uppercase;"></div>
+    <button class="btn-main" onclick="doLogin()">Entrar →</button>
+    <div class="login-error" id="login-error">Credenciales incorrectas. Verifica tu cédula y PIN.</div>
+    <div class="poweredby">Powered by <strong>PROVEED</strong> Ecosystem</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-wrap" style="display:none;">
+
+  <!-- NOTIF BAR -->
+  <div class="notif-bar" id="notif-bar" style="display:none;">
+    <svg viewBox="0 0 24 24"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg>
+    <div class="notif-bar-txt" id="notif-txt">Mensaje de RR.HH.</div>
+    <button class="notif-bar-close" onclick="document.getElementById('notif-bar').style.display='none'">×</button>
+  </div>
+
+  <!-- HEADER -->
+  <div class="app-header" id="app-header">
+    <div class="emp-avatar-hdr" id="emp-avatar-hdr">
+      <span id="emp-inicial-hdr">U</span>
+    </div>
+    <div class="emp-info-hdr">
+      <div class="emp-nombre-hdr" id="emp-nombre-hdr">Empleado</div>
+      <div class="emp-cargo-hdr" id="emp-cargo-hdr">—</div>
+    </div>
+    <button class="btn-logout" onclick="doLogout()">
+      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </div>
+
+  <!-- HOME -->
+  <div class="section active" id="sec-home">
+    <div class="asist-card" id="asist-card">
+      <div class="asist-card-title">Registro de asistencia</div>
+      <div class="asist-hora" id="reloj-hora">00:00</div>
+      <div class="asist-fecha" id="reloj-fecha">—</div>
+      <button class="btn-registrar" id="btn-registrar" onclick="abrirRegistroBio()">
+        <svg viewBox="0 0 24 24"><path d="M12 22C6.5 22 2 17.5 2 12S6.5 2 12 2s10 4.5 10 10-4.5 10-10 10z"/><circle cx="12" cy="12" r="3"/></svg>
+        Registrar asistencia
+      </button>
+      <div class="geo-status">
+        <div class="geo-dot check" id="geo-dot"></div>
+        <div class="geo-txt" id="geo-txt">Verificando ubicación...</div>
+      </div>
+      <div class="asist-registrada" id="asist-ok-msg" style="display:none;">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        <span id="asist-ok-txt">Asistencia registrada</span>
+      </div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-val acc" id="k-puntualidad">—%</div><div class="kpi-lbl">Puntualidad</div></div>
+      <div class="kpi"><div class="kpi-val azul" id="k-dias">—</div><div class="kpi-lbl">Días trabajados</div></div>
+      <div class="kpi"><div class="kpi-val naranja" id="k-atrasos">—</div><div class="kpi-lbl">Atrasos mes</div></div>
+      <div class="kpi"><div class="kpi-val" id="k-score">—</div><div class="kpi-lbl">Score desempeño</div></div>
+    </div>
+
+    <div class="sec-title">Historial esta semana</div>
+    <div id="asist-semana"></div>
+  </div>
+
+  <!-- SUELDO -->
+  <div class="section" id="sec-sueldo">
+    <div class="sueldo-card">
+      <div class="sueldo-label">Sueldo neto este mes</div>
+      <div class="sueldo-monto" id="sueldo-monto">$0.00</div>
+      <div class="sueldo-neto-label">Después de descuentos IESS</div>
+      <div class="sueldo-estado">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        <span id="sueldo-estado-txt">Pendiente de depósito</span>
+      </div>
+      <div class="sueldo-detalles">
+        <div class="sueldo-det"><div class="sueldo-det-lbl">Salario bruto</div><div class="sueldo-det-val" id="sal-bruto">$0.00</div></div>
+        <div class="sueldo-det"><div class="sueldo-det-lbl">Desc. IESS</div><div class="sueldo-det-val" id="sal-iess">$0.00</div></div>
+        <div class="sueldo-det"><div class="sueldo-det-lbl">Banco</div><div class="sueldo-det-val" id="sal-banco">—</div></div>
+        <div class="sueldo-det"><div class="sueldo-det-lbl">Cuenta</div><div class="sueldo-det-val" id="sal-cuenta">—</div></div>
+      </div>
+    </div>
+
+    <div class="sec-title">Proyección de beneficios</div>
+    <div class="beneficio-card">
+      <div class="ben-header">
+        <div class="ben-icon" style="background:rgba(50,205,50,0.1);">🎁</div>
+        <div><div class="ben-titulo">Décimo Tercer Sueldo</div><div class="ben-sub">Se paga en diciembre</div></div>
+      </div>
+      <div class="ben-barra"><div class="ben-fill" id="d13-fill" style="width:0%"></div></div>
+      <div class="ben-monto" id="d13-monto">$0.00</div>
+      <div class="ben-acumulado" id="d13-sub">Acumulado hasta ahora</div>
+    </div>
+    <div class="beneficio-card">
+      <div class="ben-header">
+        <div class="ben-icon" style="background:rgba(0,122,255,0.1);">📋</div>
+        <div><div class="ben-titulo">Décimo Cuarto Sueldo</div><div class="ben-sub">Se paga en agosto</div></div>
+      </div>
+      <div class="ben-barra"><div class="ben-fill" style="background:var(--azul);" id="d14-fill"></div></div>
+      <div class="ben-monto" id="d14-monto">$0.00</div>
+      <div class="ben-acumulado" id="d14-sub">Acumulado hasta ahora</div>
+    </div>
+    <div class="beneficio-card">
+      <div class="ben-header">
+        <div class="ben-icon" style="background:rgba(255,140,0,0.1);">💰</div>
+        <div><div class="ben-titulo">Utilidades proyectadas</div><div class="ben-sub">15% de utilidades empresa</div></div>
+      </div>
+      <div class="ben-monto" id="util-monto">Por calcular</div>
+      <div class="ben-acumulado" id="util-sub">Basado en cargas familiares: <span id="util-cargas">0</span></div>
+    </div>
+  </div>
+
+  <!-- AGENDA -->
+  <div class="section" id="sec-agenda">
+    <div class="sec-title">Próximos eventos</div>
+    <div id="agenda-lista"></div>
+  </div>
+
+  <!-- BUZÓN -->
+  <div class="section" id="sec-buzon">
+    <div class="buzon-form">
+      <div class="buzon-form-title">Enviar mensaje a RR.HH.</div>
+      <div class="buzon-tipo-row">
+        <button class="tipo-chip sel" onclick="selTipo(this,'general')">General</button>
+        <button class="tipo-chip" onclick="selTipo(this,'justificacion')">Justificación médica</button>
+        <button class="tipo-chip" onclick="selTipo(this,'permiso')">Permiso</button>
+        <button class="tipo-chip" onclick="selTipo(this,'queja')">Reporte</button>
+      </div>
+      <textarea class="buzon-textarea" id="buzon-msg" placeholder="Escribe tu mensaje aquí..."></textarea>
+      <div style="margin-bottom:10px;">
+        <div style="font-size:0.7rem;color:#aaa;font-weight:700;text-transform:uppercase;margin-bottom:6px;">Adjuntar archivo (opcional)</div>
+        <div style="border:1.5px dashed #eee;border-radius:12px;padding:12px;text-align:center;position:relative;cursor:pointer;" id="buzon-file-area">
+          <div style="font-size:0.76rem;color:#bbb;" id="buzon-file-lbl">Toca para adjuntar imagen o documento</div>
+          <input type="file" accept="image/*,application/pdf" style="position:absolute;inset:0;opacity:0;cursor:pointer;" onchange="selBuzonFile(this)">
+        </div>
+      </div>
+      <button class="btn-enviar-msg" onclick="enviarMensaje()">Enviar mensaje →</button>
+    </div>
+    <div class="sec-title">Mensajes recibidos</div>
+    <div id="mensajes-lista">
+      <div class="empty-state">Sin mensajes aún</div>
+    </div>
+  </div>
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <button class="tab active" onclick="showTab('home',this)">
+      <svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Inicio</span><div class="tab-dot"></div>
+    </button>
+    <button class="tab" onclick="showTab('sueldo',this)">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <span>Mi sueldo</span><div class="tab-dot"></div>
+    </button>
+    <button class="tab" onclick="showTab('agenda',this)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Agenda</span><div class="tab-dot"></div>
+    </button>
+    <button class="tab" onclick="showTab('buzon',this)">
+      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>Buzón</span><div class="tab-dot"></div>
+    </button>
+  </div>
+</div>
+
+<!-- MODAL REGISTRO BIOMÉTRICO -->
+<div class="modal-overlay" id="modal-bio" onclick="cerrarModal('modal-bio',event)">
+  <div class="modal-sheet">
+    <div class="drag"></div>
+    <div class="modal-header">
+      <span class="modal-title">Registro de asistencia</span>
+      <button class="close-btn" onclick="document.getElementById('modal-bio').classList.remove('show')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="bio-screen">
+        <div class="foto-captura-wrap" id="foto-captura-wrap">
+          <div class="foto-cap-placeholder" id="foto-placeholder">
+            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <img id="foto-capturada" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;">
+          <input type="file" accept="image/*" capture="user" class="foto-cap-input" id="foto-input" onchange="capturarFoto(this)">
+        </div>
+        <div style="font-size:0.72rem;color:#aaa;margin-bottom:16px;">Toca el círculo para tomar tu foto</div>
+        <div class="bio-icon" id="bio-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 22C6.5 22 2 17.5 2 12S6.5 2 12 2s10 4.5 10 10-4.5 10-10 10z"/><path d="M12 8c-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4"/><circle cx="12" cy="12" r="1"/></svg>
+        </div>
+        <div class="bio-title" id="bio-title">Verificación biométrica</div>
+        <div class="bio-sub" id="bio-sub">Toca el botón para verificar tu identidad con huella dactilar o Face ID</div>
+        <button class="btn-bio" id="btn-bio-action" onclick="iniciarBiometria()">🔒 Verificar huella / Face ID</button>
+        <div id="bio-geo-info" style="margin-top:12px;font-size:0.72rem;color:#aaa;text-align:center;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="upload-overlay" id="upload-overlay">
+  <div class="upload-box"><div class="spinner"></div><p>Registrando asistencia...</p></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const { createClient } = supabase;
+const sb = createClient('https://hfmsyrmkewscnvwynzfq.supabase.co','sb_publishable_d1oLsq70a6ZV33vW3XkRgw_nYcN2Z9v');
+
+let empleadoData={}, proveedorData={}, geoConfig={}, fotoCapturadaFile=null, buzonFileAdjunto=null, tipoMensaje='general';
+let posicionActual=null, yaRegistroHoy=false;
+
+// RELOJ
+function actualizarReloj(){
+  const now=new Date();
+  document.getElementById('reloj-hora').textContent=now.toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('reloj-fecha').textContent=now.toLocaleDateString('es-EC',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+setInterval(actualizarReloj,1000); actualizarReloj();
+
+// LOGIN
+window.doLogin=async function(){
+  const cedula=document.getElementById('login-cedula').value.trim();
+  const pin=document.getElementById('login-pin').value.trim();
+  const codigoEmpresa=document.getElementById('login-empresa-code').value.trim().toUpperCase();
+  const errEl=document.getElementById('login-error');
+  errEl.style.display='none';
+  if(!cedula||!pin||!codigoEmpresa){ errEl.style.display='block'; errEl.textContent='Completa todos los campos'; return; }
+
+  // Buscar el proveedor por código de empresa
+  const { data:prov } = await sb.from('usuarios').select('*').ilike('empresa',`%${codigoEmpresa}%`).eq('rol','proveedor').single().catch(()=>({data:null}));
+  // También buscar directamente por el campo código si existe
+  const { data:provByCode } = await sb.from('usuarios').select('*').eq('workers_codigo',codigoEmpresa).single().catch(()=>({data:null}));
+  const provFound=provByCode||prov;
+
+  if(!provFound){ errEl.style.display='block'; errEl.textContent='Empresa no encontrada'; return; }
+
+  // Buscar empleado por cédula en esa empresa
+  const { data:emp } = await sb.from('rrhh_empleados').select('*').eq('cedula',cedula).eq('proveedor_id',provFound.id).single();
+  if(!emp){ errEl.style.display='block'; errEl.textContent='Cédula no encontrada en esta empresa'; return; }
+
+  // Verificar PIN
+  if(emp.pin!==pin&&pin!==emp.cedula.slice(-4)){ errEl.style.display='block'; errEl.textContent='PIN incorrecto'; return; }
+
+  empleadoData=emp;
+  proveedorData=provFound;
+  localStorage.setItem(`workers_session`,JSON.stringify({empId:emp.id,provId:provFound.id}));
+  iniciarApp();
+};
+
+async function verificarSesion(){
+  const sess=JSON.parse(localStorage.getItem('workers_session')||'null');
+  if(!sess) return false;
+  const [{ data:emp },{ data:prov }] = await Promise.all([
+    sb.from('rrhh_empleados').select('*').eq('id',sess.empId).single(),
+    sb.from('usuarios').select('*').eq('id',sess.provId).single()
+  ]);
+  if(!emp||!prov) return false;
+  empleadoData=emp; proveedorData=prov;
+  return true;
+}
+
+window.onload=async function(){
+  const ok=await verificarSesion();
+  if(ok){ iniciarApp(); }
+  // Cargar marca del proveedor si hay código en URL
+  const params=new URLSearchParams(window.location.search);
+  const provCode=params.get('empresa');
+  if(provCode) cargarMarcaPreview(provCode);
+};
+
+async function cargarMarcaPreview(code){
+  const { data:prov } = await sb.from('usuarios').select('empresa,logo_empresa,workers_color').ilike('empresa',`%${code}%`).eq('rol','proveedor').single().catch(()=>({data:null}));
+  if(prov) aplicarMarca(prov);
+}
+
+function aplicarMarca(prov){
+  const color=prov.workers_color||'#32CD32';
+  document.documentElement.style.setProperty('--acc',color);
+  document.documentElement.style.setProperty('--acc2',color);
+  const nombre=prov.empresa||prov.nombre||'Workers';
+  document.getElementById('login-empresa').textContent=nombre;
+  document.getElementById('login-sub').textContent='Portal del empleado';
+  if(prov.logo_empresa){
+    const logoEl=document.getElementById('login-logo');
+    logoEl.innerHTML=`<img src="${prov.logo_empresa}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+  } else {
+    document.getElementById('login-logo-placeholder').textContent=nombre[0].toUpperCase();
+  }
+  // Color del header de login
+  document.getElementById('login-hero').style.background=color==='#32CD32'?'#111111':color;
+}
+
+async function iniciarApp(){
+  aplicarMarca(proveedorData);
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app-wrap').style.display='block';
+
+  // Header
+  const nombre=empleadoData.nombre||'Empleado';
+  document.getElementById('emp-nombre-hdr').textContent=nombre;
+  document.getElementById('emp-cargo-hdr').textContent=empleadoData.cargo||'—';
+  document.getElementById('emp-inicial-hdr').textContent=nombre[0].toUpperCase();
+  if(empleadoData.foto){
+    document.getElementById('emp-avatar-hdr').innerHTML=`<img src="${empleadoData.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:14px;" alt="">`;
+  }
+
+  // Cargar geo config
+  geoConfig=JSON.parse(localStorage.getItem(`geo_config_${proveedorData.id}`)||'{}');
+
+  // Verificar si ya registró hoy
+  const hoy=new Date().toISOString().split('T')[0];
+  const { data:asistHoy } = await sb.from('rrhh_asistencia').select('*').eq('empleado_id',empleadoData.id).eq('fecha',hoy).single().catch(()=>({data:null}));
+  if(asistHoy){
+    yaRegistroHoy=true;
+    document.getElementById('asist-ok-msg').style.display='flex';
+    document.getElementById('asist-ok-txt').textContent=`✓ Registrado hoy a las ${asistHoy.hora_entrada}`;
+    document.getElementById('btn-registrar').disabled=true;
+    document.getElementById('btn-registrar').textContent='Ya registrado hoy ✓';
+  }
+
+  // Verificar ventana horaria
+  verificarVentanaHoraria();
+  verificarGeolocalizacion();
+  cargarDatosEmpleado();
+  cargarMensajes();
+  cargarAgenda();
+}
+
+function verificarVentanaHoraria(){
+  const ahora=new Date();
+  const horaActual=ahora.getHours()*60+ahora.getMinutes();
+  const horaIni=geoConfig.horaIni||'08:00';
+  const horaFin=geoConfig.horaFin||'08:40';
+  const [h1,m1]=horaIni.split(':').map(Number);
+  const [h2,m2]=horaFin.split(':').map(Number);
+  const minIni=h1*60+m1, minFin=h2*60+m2;
+  if(!yaRegistroHoy&&(horaActual<minIni||horaActual>minFin)){
+    document.getElementById('btn-registrar').disabled=true;
+    document.getElementById('btn-registrar').textContent=`Registro disponible ${horaIni} - ${horaFin}`;
+  }
+}
+
+function verificarGeolocalizacion(){
+  if(!navigator.geolocation){ document.getElementById('geo-txt').textContent='GPS no disponible'; return; }
+  navigator.geolocation.getCurrentPosition(pos=>{
+    posicionActual={lat:pos.coords.latitude,lng:pos.coords.longitude};
+    document.getElementById('geo-dot').className='geo-dot ok';
+    document.getElementById('geo-txt').textContent=`Ubicación verificada ✓`;
+  },err=>{
+    document.getElementById('geo-dot').className='geo-dot err';
+    document.getElementById('geo-txt').textContent='No se pudo obtener ubicación';
+    posicionActual=null;
+  });
+}
+
+async function cargarDatosEmpleado(){
+  // Nómina
+  const mes=new Date().toISOString().slice(0,7);
+  const { data:nom } = await sb.from('rrhh_nomina').select('*').eq('empleado_id',empleadoData.id).eq('periodo',mes).single().catch(()=>({data:null}));
+  if(nom){
+    document.getElementById('sueldo-monto').textContent='$'+Number(nom.salario_neto||0).toFixed(2);
+    document.getElementById('sal-bruto').textContent='$'+Number(nom.salario_base||0).toFixed(2);
+    const iess=Number(nom.salario_base||0)*(nom.porcentaje_iess||9.45)/100;
+    document.getElementById('sal-iess').textContent='-$'+iess.toFixed(2);
+    document.getElementById('sal-banco').textContent=nom.banco||empleadoData.banco||'—';
+    document.getElementById('sal-cuenta').textContent=nom.cuenta||empleadoData.cuenta||'—';
+    // Décimos
+    const d13=Number(nom.decimo_tercero||0);
+    const d14=Number(nom.decimo_cuarto||0);
+    const mesActual=new Date().getMonth()+1;
+    document.getElementById('d13-monto').textContent='$'+(d13*mesActual).toFixed(2);
+    document.getElementById('d13-sub').textContent=`${mesActual} meses acumulados`;
+    document.getElementById('d13-fill').style.width=Math.round(mesActual/12*100)+'%';
+    document.getElementById('d14-monto').textContent='$'+(d14*mesActual).toFixed(2);
+    document.getElementById('d14-fill').style.width=Math.round(mesActual/12*100)+'%';
+    document.getElementById('util-cargas').textContent=empleadoData.cargas_familiares||0;
+  }
+ // Asistencia stats
+  const { data:asistencias } = await sb.from('rrhh_asistencia').select('*').eq('empleado_id',empleadoData.id).order('fecha',{ascending:false}).limit(30);
+  const lista=asistencias||[];
+  const puntuales=lista.filter(a=>a.estado==='puntual').length;
+  const tardanzas=lista.filter(a=>a.estado==='tarde').length;
+  const faltas=lista.filter(a=>a.estado==='falta').length;
+  const puntualidad=lista.length>0?Math.round(puntuales/lista.length*100):100;
+  document.getElementById('k-puntualidad').textContent=puntualidad+'%';
+  document.getElementById('k-dias').textContent=lista.length-faltas;
+  document.getElementById('k-atrasos').textContent=tardanzas;
+  document.getElementById('k-score').textContent=(empleadoData.score_desempeno||100)+'%';
+
+  // Semana actual
+  const semana=lista.slice(0,7);
+  const semEl=document.getElementById('asist-semana');
+  semEl.innerHTML='';
+  if(!semana.length){ semEl.innerHTML='<div class="empty-state">Sin registros esta semana</div>'; return; }
+  semana.forEach(a=>{
+    const div=document.createElement('div'); div.className='asist-hist-item';
+    const fechaFmt=new Date(a.fecha+'T12:00:00').toLocaleDateString('es-EC',{weekday:'short',day:'numeric',month:'short'});
+    const estClass=a.estado==='puntual'?'est-puntual':a.estado==='tarde'?'est-tarde':'est-falta';
+    const atrasoTxt=a.minutos_atraso>0?`+${a.minutos_atraso} min tarde`:'Puntual';
+    div.innerHTML=`
+      <div class="asist-hist-fecha">${fechaFmt}</div>
+      <div class="asist-hist-info">
+        <div class="asist-hist-hora">${a.hora_entrada||'—'}</div>
+        <div class="asist-hist-atraso">${atrasoTxt}</div>
+      </div>
+      <div class="asist-hist-estado ${estClass}">${a.estado||'—'}</div>`;
+    semEl.appendChild(div);
+  });
+}
+
+// BIOMETRÍA Y REGISTRO
+window.abrirRegistroBio=function(){
+  fotoCapturadaFile=null;
+  document.getElementById('foto-capturada').style.display='none';
+  document.getElementById('foto-placeholder').style.display='flex';
+  document.getElementById('bio-icon').className='bio-icon';
+  document.getElementById('bio-title').textContent='Verificación biométrica';
+  document.getElementById('bio-sub').textContent='1. Toma tu foto\n2. Verifica tu huella o Face ID';
+  document.getElementById('btn-bio-action').textContent='🔒 Verificar huella / Face ID';
+  document.getElementById('btn-bio-action').disabled=false;
+  document.getElementById('btn-bio-action').onclick=iniciarBiometria;
+  // Geo info
+  const geoEl=document.getElementById('bio-geo-info');
+  if(posicionActual) geoEl.textContent='📍 Ubicación verificada';
+  else geoEl.textContent='⚠️ No se detectó ubicación GPS';
+  document.getElementById('modal-bio').classList.add('show');
+};
+
+window.capturarFoto=function(input){
+  const file=input.files[0]; if(!file) return;
+  fotoCapturadaFile=file;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    document.getElementById('foto-capturada').src=e.target.result;
+    document.getElementById('foto-capturada').style.display='block';
+    document.getElementById('foto-placeholder').style.display='none';
+  };
+  reader.readAsDataURL(file);
+};
+
+window.iniciarBiometria=async function(){
+  if(!fotoCapturadaFile){ showToast('Primero toma tu foto'); return; }
+  if(!window.PublicKeyCredential){ await registrarSinBiometria(); return; }
+  try{
+    const available=await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    if(!available){ await registrarSinBiometria(); return; }
+    const btn=document.getElementById('btn-bio-action');
+    btn.disabled=true; btn.textContent='Verificando...';
+    document.getElementById('bio-icon').className='bio-icon scanning';
+    document.getElementById('bio-title').textContent='Verificando identidad...';
+    document.getElementById('bio-sub').textContent='Coloca tu dedo en el sensor o mira la cámara';
+    const credential=await navigator.credentials.get({publicKey:{
+      challenge:new Uint8Array(32),
+      timeout:60000,
+      userVerification:'required'
+    }});
+    if(credential){ document.getElementById('bio-icon').className='bio-icon ok'; await completarRegistro(); }
+  } catch(e){
+    if(e.name==='NotAllowedError') showToast('Verificación cancelada');
+    else await registrarSinBiometria();
+    document.getElementById('bio-icon').className='bio-icon';
+    document.getElementById('btn-bio-action').disabled=false;
+    document.getElementById('btn-bio-action').textContent='🔒 Verificar huella / Face ID';
+  }
+};
+
+async function registrarSinBiometria(){
+  document.getElementById('bio-icon').className='bio-icon ok';
+  document.getElementById('bio-title').textContent='Registrando...';
+  await completarRegistro();
+}
+
+async function completarRegistro(){
+  document.getElementById('modal-bio').classList.remove('show');
+  document.getElementById('upload-overlay').classList.add('show');
+  try{
+    const ahora=new Date();
+    const fecha=ahora.toISOString().split('T')[0];
+    const hora=ahora.toTimeString().slice(0,5);
+    const geoFin=geoConfig.horaFin||'08:40';
+    const [h,m]=geoFin.split(':').map(Number);
+    const minLimite=h*60+m;
+    const minActual=ahora.getHours()*60+ahora.getMinutes();
+    const minAtraso=Math.max(0,minActual-minLimite);
+    const estado=minAtraso===0?'puntual':minAtraso<=15?'tarde':'tarde';
+    let fotoUrl='';
+    if(fotoCapturadaFile){
+      const path=`rrhh/${proveedorData.id}/asistencia/${empleadoData.id}_${Date.now()}`;
+      const { error } = await sb.storage.from('proveed-media').upload(path,fotoCapturadaFile,{upsert:true});
+      if(!error){ const { data } = sb.storage.from('proveed-media').getPublicUrl(path); fotoUrl=data.publicUrl; }
+    }
+    await sb.from('rrhh_asistencia').insert({
+      proveedor_id:proveedorData.id, empleado_id:empleadoData.id,
+      empleado_nombre:empleadoData.nombre,
+      fecha, hora_entrada:hora,
+      estado, minutos_atraso:minAtraso,
+      foto_url:fotoUrl,
+      lat:posicionActual?.lat||null,
+      lng:posicionActual?.lng||null,
+      validado_geo:posicionActual!==null,
+      validado_bio:true
+    });
+    // Actualizar score
+    const puntos=minAtraso===0?0:minAtraso<=15?5:20;
+    const nuevoScore=Math.max(0,(empleadoData.score_desempeno||100)-puntos);
+    await sb.from('rrhh_empleados').update({score_desempeno:nuevoScore}).eq('id',empleadoData.id);
+    empleadoData.score_desempeno=nuevoScore;
+    yaRegistroHoy=true;
+    document.getElementById('asist-ok-msg').style.display='flex';
+    document.getElementById('asist-ok-txt').textContent=`✓ Registrado a las ${hora}${minAtraso>0?' (+'+minAtraso+' min)':''}`;
+    document.getElementById('btn-registrar').disabled=true;
+    document.getElementById('btn-registrar').textContent='Ya registrado hoy ✓';
+    cargarDatosEmpleado();
+    showToast('✓ Asistencia registrada correctamente');
+  } catch(e){ showToast('Error: '+e.message); }
+  document.getElementById('upload-overlay').classList.remove('show');
+}
+
+// MENSAJES BUZÓN
+async function cargarMensajes(){
+  const { data } = await sb.from('rrhh_mensajes').select('*').eq('empleado_id',empleadoData.id).order('created_at',{ascending:false}).limit(10);
+  const lista=data||[];
+  const cont=document.getElementById('mensajes-lista');
+  if(!lista.length){ cont.innerHTML='<div class="empty-state">Sin mensajes aún</div>'; return; }
+  cont.innerHTML='';
+  lista.forEach(m=>{
+    const div=document.createElement('div'); div.className='mensaje-item';
+    const hora=new Date(m.created_at).toLocaleDateString('es-EC',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    const esDeRRHH=m.de_rrhh;
+    div.innerHTML=`
+      <div class="msg-header">
+        ${!m.leido&&esDeRRHH?'<div class="msg-no-leido"></div>':''}
+        <div class="msg-de">${esDeRRHH?'📋 RR.HH.':'Tú'}</div>
+        <div class="msg-hora">${hora}</div>
+      </div>
+      <div class="msg-txt">${m.texto}</div>`;
+    cont.appendChild(div);
+    // Marcar como leído
+    if(!m.leido&&esDeRRHH) sb.from('rrhh_mensajes').update({leido:true}).eq('id',m.id);
+  });
+
+  // Mostrar notif si hay no leídos
+  const noLeidos=lista.filter(m=>!m.leido&&m.de_rrhh);
+  if(noLeidos.length){
+    document.getElementById('notif-bar').style.display='flex';
+    document.getElementById('notif-txt').textContent=noLeidos[0].texto.slice(0,60)+(noLeidos[0].texto.length>60?'...':'');
+  }
+}
+
+window.enviarMensaje=async function(){
+  const texto=document.getElementById('buzon-msg').value.trim();
+  if(!texto){ showToast('Escribe un mensaje'); return; }
+  document.getElementById('upload-overlay').classList.add('show');
+  try{
+    let adjuntoUrl='';
+    if(buzonFileAdjunto){
+      const path=`rrhh/${proveedorData.id}/mensajes/${Date.now()}`;
+      const { error } = await sb.storage.from('proveed-media').upload(path,buzonFileAdjunto,{upsert:true});
+      if(!error){ const { data } = sb.storage.from('proveed-media').getPublicUrl(path); adjuntoUrl=data.publicUrl; }
+    }
+    await sb.from('rrhh_mensajes').insert({
+      proveedor_id:proveedorData.id, empleado_id:empleadoData.id,
+      empleado_nombre:empleadoData.nombre,
+      texto, tipo:tipoMensaje,
+      adjunto:adjuntoUrl||null,
+      de_rrhh:false, leido:true
+    });
+    document.getElementById('buzon-msg').value='';
+    buzonFileAdjunto=null;
+    document.getElementById('buzon-file-lbl').textContent='Toca para adjuntar imagen o documento';
+    showToast('✓ Mensaje enviado a RR.HH.');
+    cargarMensajes();
+  } catch(e){ showToast('Error: '+e.message); }
+  document.getElementById('upload-overlay').classList.remove('show');
+};
+
+window.selBuzonFile=function(input){
+  const file=input.files[0]; if(!file) return;
+  buzonFileAdjunto=file;
+  document.getElementById('buzon-file-lbl').textContent='📎 '+file.name;
+};
+
+window.selTipo=function(el,tipo){
+  tipoMensaje=tipo;
+  document.querySelectorAll('.tipo-chip').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');
+};
+
+// AGENDA
+async function cargarAgenda(){
+  const { data } = await sb.from('rrhh_agenda').select('*').eq('proveedor_id',proveedorData.id).gte('fecha',new Date().toISOString().split('T')[0]).order('fecha',{ascending:true}).limit(10);
+  const eventos=data||[];
+  const cont=document.getElementById('agenda-lista');
+
+  // Eventos fijos del sistema
+  const ahora=new Date();
+  const mesActual=ahora.getMonth()+1;
+  const eventosFijos=[
+    {fecha:`${ahora.getFullYear()}-${String(mesActual).padStart(2,'0')}-28`,titulo:'Pago de sueldo',desc:'Depósito mensual en cuenta bancaria',tipo:'pago',color:'#32CD32'},
+    {fecha:`${ahora.getFullYear()}-12-24`,titulo:'Décimo Tercer Sueldo',desc:'Depósito décimo tercero',tipo:'beneficio',color:'#007AFF'},
+    {fecha:`${ahora.getFullYear()}-08-15`,titulo:'Décimo Cuarto Sueldo',desc:'Depósito décimo cuarto (SBU)',tipo:'beneficio',color:'#AF52DE'}
+  ];
+  const todos=[...eventosFijos,...eventos].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+
+  if(!todos.length){ cont.innerHTML='<div class="empty-state">Sin eventos próximos</div>'; return; }
+  cont.innerHTML='';
+  todos.forEach(ev=>{
+    const fecha=new Date(ev.fecha+'T12:00:00');
+    const div=document.createElement('div'); div.className='evento-item';
+    div.innerHTML=`
+      <div class="evento-fecha-box" style="background:${ev.color||'var(--acc)'};">
+        <div class="evento-dia">${fecha.getDate()}</div>
+        <div class="evento-mes">${fecha.toLocaleDateString('es-EC',{month:'short'})}</div>
+      </div>
+      <div class="evento-info">
+        <div class="evento-titulo">${ev.titulo}</div>
+        <div class="evento-desc">${ev.desc||ev.descripcion||''}</div>
+        <span class="evento-tipo" style="background:rgba(50,205,50,0.1);color:var(--acc);">${ev.tipo||'evento'}</span>
+      </div>`;
+    cont.appendChild(div);
+  });
+}
+
+window.doLogout=function(){
+  localStorage.removeItem('workers_session');
+  window.location.reload();
+};
+
+window.showTab=function(tab,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sec-'+tab).classList.add('active');
+  btn.classList.add('active');
+};
+
+window.cerrarModal=(id,e)=>{ if(e.target===document.getElementById(id)) document.getElementById(id).classList.remove('show'); };
+
+function showToast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+</script>
+</body>
+</html>
